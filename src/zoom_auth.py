@@ -26,6 +26,25 @@ class ZoomAccessToken:
     def expires_at(self):
         return self.__expires_at
 
+    def get_zoom_access_token(self) -> None:
+
+        token_file_path = Path('..//logs/zoom_access_token.json')
+
+        if not token_file_path.is_file():
+            self.zoom_request_token()
+        else:
+            with open(token_file_path,'r') as json_file:
+                zoom_access_token = json.load(json_file)
+
+            current_time = time.time() + 60
+            expires_at = zoom_access_token['expires_at']
+
+            if current_time > expires_at:
+                self.zoom_request_token()
+            else:
+                self.__access_token = zoom_access_token['access_token']
+                self.__expires_at = expires_at
+
     def zoom_request_token(self) -> None:
 
         load_dotenv()
@@ -47,24 +66,6 @@ class ZoomAccessToken:
         self.__expires_at = zoom_access_token['expires_at']
 
 
-    def get_zoom_access_token(self) -> None:
-
-        token_file_path = Path('..//logs/zoom_access_token.json')
-
-        if not token_file_path.is_file():
-            self.zoom_request_token()
-        else:
-            with open(token_file_path,'r') as json_file:
-                zoom_access_token = json.load(json_file)
-
-            current_time = time.time() + 60
-            expires_at = zoom_access_token['expires_at']
-
-            if current_time > expires_at:
-                self.zoom_request_token()
-            else:
-                self.__access_token = zoom_access_token['access_token']
-                self.__expires_at = expires_at
 
 
 if __name__ == '__main__':
