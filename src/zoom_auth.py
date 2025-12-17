@@ -11,48 +11,63 @@ from requests.auth import HTTPBasicAuth
 
 from pathlib import Path
 
+class ZoomAccessToken:
 
-def zoom_request_token() -> dict[str,str]:
+    def __init__(self):
+        self.__access_token = ''
+        self.__expires_at = 0.0
+        self.get_zoom_access_token()
 
-    load_dotenv()
+    @property
+    def access_token(self):
+        return self.__access_token
 
-    payload = {'grant_type':'account_credentials', 'account_id':os.getenv('ACCOUNT_ID')}
-    auth = HTTPBasicAuth(os.getenv('CLIENT_ID'), os.getenv('CLIENT_SECRET'))
+    @property
+    def expires_at(self):
+        return self.__expires_at
 
-    response = requests.post(url=os.getenv('ZOOM_OAUTH_ENDPOINT'),data=payload, auth=auth)
+    def zoom_request_token(self) -> None:
 
-    zoom_access_token = response.json()
-    expires_at = time.time() + zoom_access_token['expires_in']
+        load_dotenv()
 
-    zoom_access_token.update({'expires_at':expires_at})
+        payload = {'grant_type':'account_credentials', 'account_id':os.getenv('ACCOUNT_ID')}
+        auth = HTTPBasicAuth(os.getenv('CLIENT_ID'), os.getenv('CLIENT_SECRET'))
 
-    with open('..//logs/zoom_access_token.json','w') as json_file:
-        json.dump(zoom_access_token,json_file, indent=4)
+        response = requests.post(url=os.getenv('ZOOM_OAUTH_ENDPOINT'),data=payload, auth=auth)
 
-    return zoom_access_token
+        zoom_access_token = response.json()
+        expires_at = time.time() + zoom_access_token['expires_in']
+
+        zoom_access_token.update({'expires_at':expires_at})
+
+        with open('..//logs/zoom_access_token.json','w') as json_file:
+            json.dump(zoom_access_token,json_file, indent=4)
+
+        self.__access_token = zoom_access_token['access_token']
+        self.__expires_at = zoom_access_token['expires_at']
 
 
-def get_zoom_access_token() -> dict[str,str]:
+    def get_zoom_access_token(self) -> None:
 
-    token_file_path = Path('..//logs/zoom_access_token.json')
+        token_file_path = Path('..//logs/zoom_access_token.json')
 
-    if not token_file_path.is_file():
-        return zoom_request_token()
-    else:
-        with open(token_file_path,'r') as json_file:
-            zoom_access_token = json.load(json_file)
-
-        current_time = time.time() + 60
-        expires_at = zoom_access_token['expires_at']
-
-        if current_time > expires_at:
-            return zoom_request_token()
+        if not token_file_path.is_file():
+            self.zoom_request_token()
         else:
-            return zoom_access_token
+            with open(token_file_path,'r') as json_file:
+                zoom_access_token = json.load(json_file)
+
+            current_time = time.time() + 60
+            expires_at = zoom_access_token['expires_at']
+
+            if current_time > expires_at:
+                self.zoom_request_token()
+            else:
+                self.__access_token = zoom_access_token['access_token']
+                self.__expires_at = expires_at
 
 
 if __name__ == '__main__':
-    token = get_zoom_access_token()
+    token = ZoomAccessToken()
 
-    for key, value in token.items():
-        print(f'{key}:{value}')
+    print(token.access_token)
